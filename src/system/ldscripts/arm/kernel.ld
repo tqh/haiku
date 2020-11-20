@@ -1,22 +1,12 @@
 OUTPUT_FORMAT("elf32-littlearm", "elf32-littlearm", "elf32-littlearm")
 OUTPUT_ARCH(arm)
 
-/* XXX: this shouldn't be needed to make kernel_arm have separate text and data segments!!! */
-PHDRS
-{
-	headers PT_PHDR PHDRS ;
-	text PT_LOAD FILEHDR PHDRS ;
-	data PT_LOAD ;
-	dynamic PT_DYNAMIC ;
-}
-
 ENTRY(_start)
-SEARCH_DIR("libgcc");
 SECTIONS
 {
 	. = 0x80000000 + SIZEOF_HEADERS;
 
-	.interp : { *(.interp) } :text
+	.interp : { *(.interp) }
 	.hash : { *(.hash) }
 	.dynsym : { *(.dynsym) }
 	.dynstr : { *(.dynstr) }
@@ -44,36 +34,37 @@ SECTIONS
 	.plt : { *(.plt) }
 
 	/* text/read-only data */
-	.text :	{ *(.text .gnu.linkonce.t.*) } :text =0x9090
+	.text :	{ *(.text .gnu.linkonce.t.*) } =0x9090
 
 	.rodata : { *(.rodata) }
 
-	/* exception unwinding - should really not be needed! XXX: find the correct place. */
-	__exidx_start = .;
-	.ARM.exidx   : { *(.ARM.exidx* .gnu.linkonce.armexidx.*) }
-	__exidx_end = .;
-
+/*
+	. = ALIGN(0x8);
+	altcodepatch_begin = .;
+	.altcodepatch : { *(.altcodepatch) }
+	altcodepatch_end = .;
+*/
 	/* writable data  */
 	. = ALIGN(0x1000);
 	__data_start = .;
-	.data : { *(.data .gnu.linkonce.d.*) } :data
+	.data : { *(.data .gnu.linkonce.d.*) }
 
-	. = ALIGN(0x4);
+	. = ALIGN(0x8);
 	__ctor_list = .;
-	.ctors : { *(.init_array) *(.ctors) }
+	.ctors : { *(.ctors) }
 	__ctor_end = .;
 	__dtor_list = .;
-	.dtors : { *(.fini_array) *(.dtors) }
+	.dtors : { *(.dtors) }
 	__dtor_end = .;
 	.got : { *(.got.plt) *(.got) }
-	.dynamic : { *(.dynamic) } :dynamic :data
-
+	.dynamic : { *(.dynamic) }
+	
 	/* uninitialized data (in same segment as writable data) */
 	__bss_start = .;
 	.bss : { *(.bss) }
 
 	. = ALIGN(0x1000);
-	_end = .;
+	_end = . ;
 
 	/* Strip unnecessary stuff */
 	/DISCARD/ : { *(.comment .note .eh_frame) }
