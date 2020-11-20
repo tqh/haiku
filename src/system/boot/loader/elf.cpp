@@ -80,19 +80,31 @@ struct ELF32Class {
 	AllocateRegion(AddrType* _address, AddrType size, uint8 protection,
 		void** _mappedAddress)
 	{
-		status_t status = platform_allocate_region((void**)_address, size,
+		void* address = (void*)*_address;
+		status_t status = platform_allocate_region(&address, size,
 			protection, false);
 		if (status != B_OK)
 			return status;
 
-		*_mappedAddress = (void*)*_address;
+		*_mappedAddress = address;
+#ifdef _BOOT_PLATFORM_EFI
+		platform_bootloader_address_to_kernel_address(address, (addr_t*) _address);
+#endif
 		return B_OK;
 	}
 
 	static inline void*
 	Map(AddrType address)
 	{
+#ifdef _BOOT_PLATFORM_EFI
+		void *result;
+		if (platform_kernel_address_to_bootloader_address(address, &result) != B_OK) {
+			panic("Couldn't convert address %#lx", address);
+		}
+		return result;
+#else
 		return (void*)address;
+#endif
 	}
 };
 
@@ -226,6 +238,12 @@ ELFLoader<Class>::Load(int fd, preloaded_image* _image)
 		goto error1;
 	}
 
+	if (elfHeader.e_phnum == 0) {
+		TRACE(("Zero program headers found\n"));
+		status = B_ERROR;
+		goto error1;
+	}
+
 	// create an area large enough to hold the image
 
 	image->data_region.size = 0;
@@ -264,8 +282,11 @@ ELFLoader<Class>::Load(int fd, preloaded_image* _image)
 				continue;
 			}
 			region = &image->text_region;
-		} else
+			//dprintf("Setting text to %d\n", image->text_region.size);
+		} else {
+			dprintf("elf: continuing!\n");
 			continue;
+		}
 
 		region->start = ROUNDDOWN(header.p_vaddr, B_PAGE_SIZE);
 		region->size = ROUNDUP(header.p_memsz + (header.p_vaddr % B_PAGE_SIZE),
@@ -278,8 +299,8 @@ ELFLoader<Class>::Load(int fd, preloaded_image* _image)
 	}
 
 	// found both, text and data?
-	if (image->data_region.size == 0 || image->text_region.size == 0) {
-		dprintf("Couldn't find both text and data segment!\n");
+	if (image->text_region.size == 0 || image->data_region.size == 0) {
+		dprintf("Couldn't find text and/or data segment!\n");
 		status = B_BAD_DATA;
 		goto error1;
 	}
