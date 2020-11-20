@@ -84,9 +84,6 @@ convert_preloaded_image(preloaded_elf64_image* image)
 static void
 convert_kernel_args()
 {
-	if (gKernelArgs.kernel_image->elf_class != ELFCLASS64)
-		return;
-
 	fix_address(gKernelArgs.boot_volume);
 	fix_address(gKernelArgs.vesa_modes);
 	fix_address(gKernelArgs.edid_info);
@@ -130,6 +127,7 @@ get_kernel_entry(void)
 	if (gKernelArgs.kernel_image->elf_class == ELFCLASS64) {
 		preloaded_elf64_image *image = static_cast<preloaded_elf64_image *>(
 			gKernelArgs.kernel_image.Pointer());
+		convert_kernel_args();
 		return image->elf_header.e_entry;
 	} else if (gKernelArgs.kernel_image->elf_class == ELFCLASS32) {
 		preloaded_elf32_image *image = static_cast<preloaded_elf32_image *>(
@@ -149,10 +147,9 @@ platform_start_kernel(void)
 	addr_t kernelEntry = get_kernel_entry();
 
 	arch_mmu_init();
-	convert_kernel_args();
 
 	// Save the kernel entry point address.
-	dprintf("kernel entry at %#lx\n", kernelEntry);
+	dprintf("kernel entry at 0x%" B_PRIx64 "\n", kernelEntry);
 
 	// map in a kernel stack
 	void *stack_address = NULL;
@@ -164,7 +161,7 @@ platform_start_kernel(void)
 	gKernelArgs.cpu_kstack[0].start = fix_address((addr_t)stack_address);
 	gKernelArgs.cpu_kstack[0].size = KERNEL_STACK_SIZE
 		+ KERNEL_STACK_GUARD_PAGES * B_PAGE_SIZE;
-	dprintf("Kernel stack at %#lx\n", gKernelArgs.cpu_kstack[0].start);
+	dprintf("Kernel stack at 0x%" B_PRIx64 "\n", gKernelArgs.cpu_kstack[0].start);
 
 	// Apply any weird EFI quirks
 	quirks_init();
