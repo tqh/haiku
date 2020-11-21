@@ -14,6 +14,10 @@
 extern "C" void arch_enter_kernel(struct kernel_args *kernelArgs,
 	addr_t kernelEntry, addr_t kernelStackTop);
 
+extern void arch_mmu_post_efi_setup(size_t memory_map_size,
+    efi_memory_descriptor *memory_map, size_t descriptor_size,
+    uint32_t descriptor_version);
+
 void
 arch_start_kernel(addr_t kernelEntry)
 {
@@ -86,8 +90,8 @@ arch_start_kernel(addr_t kernelEntry)
 	}
 
 	// Update EFI, generate final kernel physical memory map, etc.
-	//arch_mmu_post_efi_setup(memory_map_size, memory_map,
-	//		descriptor_size, descriptor_version);
+	arch_mmu_post_efi_setup(memory_map_size, memory_map,
+			descriptor_size, descriptor_version);
 
 	//smp_boot_other_cpus(final_pml4, kernelEntry);
 
