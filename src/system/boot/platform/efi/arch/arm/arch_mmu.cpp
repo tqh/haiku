@@ -10,7 +10,6 @@
 #include <arch_kernel.h>
 #include <boot/platform.h>
 #include <boot/stage2.h>
-#include <arch/x86/descriptors.h>
 
 #include <efi/types.h>
 #include <efi/boot-services.h>
